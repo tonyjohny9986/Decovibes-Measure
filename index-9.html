@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Measurement Pro - Decovibes</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#F5EFE7 0%,#E8DED0 100%);min-height:100vh;padding:20px}
+.container{max-width:1400px;margin:0 auto}
+.header{background:linear-gradient(135deg,#7BCCC4 0%,#5BA89F 100%);color:white;padding:24px;border-radius:12px;margin-bottom:20px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.header-content{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px}
+.logo-section{display:flex;align-items:center;gap:15px}
+.logo{height:50px;object-fit:contain}
+.title{font-size:32px;font-weight:700;margin:0}
+.subtitle{font-size:14px;opacity:0.9;margin:5px 0 0 0}
+.nav-buttons{display:flex;gap:10px;flex-wrap:wrap}
+.btn{padding:12px 24px;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-size:16px;transition:all 0.2s}
+.btn-nav{background:rgba(255,255,255,0.2);color:white}
+.btn-nav.active{background:linear-gradient(135deg,#B8936D 0%,#9A7A57 100%)}
+.btn-teal{background:linear-gradient(135deg,#7BCCC4 0%,#5BA89F 100%);color:white;box-shadow:0 4px 6px rgba(123,204,196,0.3)}
+.btn-teal:hover{transform:translateY(-2px)}
+.btn-gray{background:#6B7280;color:white}
+.btn-red{background:#EF4444;color:white}
+.btn-green{background:#10B981;color:white}
+.card{background:white;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+.card-title{color:#7BCCC4;font-size:20px;margin:0 0 20px 0;font-weight:600}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px;margin-bottom:20px}
+input,select{width:100%;padding:12px;font-size:16px;border:2px solid #E5E7EB;border-radius:8px}
+input:focus,select:focus{outline:none;border-color:#7BCCC4}
+.table-container{overflow-x:auto;margin:20px 0}
+table{width:100%;border-collapse:collapse;min-width:800px}
+th{background:linear-gradient(135deg,#7BCCC4 0%,#5BA89F 100%);color:white;padding:12px 8px;text-align:left;font-weight:600;font-size:14px}
+td{padding:10px 8px;border-bottom:1px solid #E5E7EB}
+tr:hover{background:#F9FAFB}
+.empty-state{text-align:center;padding:60px 20px}
+.empty-icon{font-size:80px;margin-bottom:20px}
+.empty-title{font-size:28px;color:#1F2937;margin-bottom:15px}
+.empty-text{color:#6B7280;font-size:16px;margin-bottom:30px}
+.status{position:fixed;top:10px;right:10px;padding:8px 15px;border-radius:20px;font-size:12px;font-weight:bold;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.status.online{background:#10B981;color:white}
+.status.offline{background:#EF4444;color:white}
+.btn-row{display:flex;gap:15px;margin-top:20px}
+.btn-row .btn{flex:1}
+.hidden{display:none}
+.summary-card{background:linear-gradient(135deg,#7BCCC4 0%,#5BA89F 100%);color:white;border-radius:12px;padding:24px;margin-bottom:20px}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-top:15px}
+.summary-box{background:rgba(255,255,255,0.2);padding:15px;border-radius:8px}
+.summary-label{font-size:12px;opacity:0.9;margin-bottom:5px}
+.summary-value{font-size:24px;font-weight:700}
+.settings-panel{background:#F9FAFB;padding:20px;border-radius:8px;margin-top:15px;border:2px solid #E5E7EB}
+.price-table{width:100%;margin-top:15px}
+.price-table td{padding:8px}
+.price-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.2)}
+.price-row:last-child{border-bottom:2px solid rgba(255,255,255,0.4);font-weight:700;font-size:18px}
+</style>
+</head>
+<body>
+<div id="network-status" class="status online">● Online</div>
+<div class="container">
+<div class="header">
+<div class="header-content">
+<div class="logo-section">
+<img src="logo.png" alt="Decovibes" class="logo" onerror="this.style.display='none'">
+<div>
+<h1 class="title">Measurement Pro</h1>
+<p class="subtitle">Decovibes - Professional Window Measurements</p>
+</div>
+</div>
+<div class="nav-buttons">
+<button id="btnSettings" class="btn btn-nav" onclick="toggleSettings()">⚙️</button>
+<button id="btnMeasure" class="btn btn-nav active" onclick="showTab('measure')">📏 Measure</button>
+<button id="btnJobs" class="btn btn-nav" onclick="showTab('saved')">💾 Jobs (<span id="jobCount">0</span>)</button>
+</div>
+</div>
+<div id="settingsPanel" class="settings-panel hidden">
+<h3 style="color:#7BCCC4;margin-bottom:15px">⚙️ Default Rates & Multipliers</h3>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:15px">
+<div>
+<strong style="color:#B8936D">Blinds ($/m²)</strong>
+<table style="width:100%;margin-top:10px;font-size:14px">
+<tr><td>Roller</td><td><input type="number" id="rate-Blinds-Roller" value="110" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Blinds-Roller" value="1.8" style="width:80px;padding:6px"></td></tr>
+<tr><td>Vertical</td><td><input type="number" id="rate-Blinds-Vertical" value="115" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Blinds-Vertical" value="1.8" style="width:80px;padding:6px"></td></tr>
+<tr><td>Zebra</td><td><input type="number" id="rate-Blinds-Zebra" value="120" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Blinds-Zebra" value="1.8" style="width:80px;padding:6px"></td></tr>
+<tr><td>Venetian</td><td><input type="number" id="rate-Blinds-Venetian" value="105" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Blinds-Venetian" value="1.8" style="width:80px;padding:6px"></td></tr>
+</table>
+</div>
+<div>
+<strong style="color:#B8936D">Curtains ($/m)</strong>
+<table style="width:100%;margin-top:10px;font-size:14px">
+<tr><td>Sheer</td><td><input type="number" id="rate-Curtains-Sheer" value="80" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Curtains-Sheer" value="1.7" style="width:80px;padding:6px"></td></tr>
+<tr><td>Blockout</td><td><input type="number" id="rate-Curtains-Blockout" value="100" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Curtains-Blockout" value="1.7" style="width:80px;padding:6px"></td></tr>
+</table>
+</div>
+<div>
+<strong style="color:#B8936D">Other Products ($/m²)</strong>
+<table style="width:100%;margin-top:10px;font-size:14px">
+<tr><td>Shutters</td><td><input type="number" id="rate-Shutters" value="150" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Shutters" value="2.0" style="width:80px;padding:6px"></td></tr>
+<tr><td>Verishade</td><td><input type="number" id="rate-Verishade" value="120" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Verishade" value="2.0" style="width:80px;padding:6px"></td></tr>
+</table>
+</div>
+</div>
+<button onclick="saveSettings()" class="btn btn-teal" style="margin-top:15px">💾 Save Settings</button>
+</div>
+</div>
+
+<div id="viewMeasure">
+<div id="emptyState" class="card">
+<div class="empty-state">
+<div class="empty-icon">📐</div>
+<h2 class="empty-title">Start New Measurement</h2>
+<p class="empty-text">Create a professional quote for your client</p>
+<button onclick="startNewJob()" class="btn btn-teal">+ New Job</button>
+</div>
+</div>
+
+<div id="jobForm" class="hidden">
+<div class="card">
+<h3 class="card-title">📋 Client Information</h3>
+<div class="form-grid">
+<input type="text" id="clientName" placeholder="Client Name *">
+<input type="text" id="address" placeholder="Address">
+<input type="tel" id="phone" placeholder="Phone">
+<input type="email" id="email" placeholder="Email">
+</div>
+</div>
+
+<div class="card">
+<h3 class="card-title">📏 Window Measurements</h3>
+<div id="emptyWindows" class="empty-state" style="padding:40px">
+<p style="color:#6B7280;margin-bottom:15px;font-size:16px">No windows added yet</p>
+<button onclick="addWindow()" class="btn btn-teal">+ Add Window</button>
+</div>
+<div id="windowsTable" class="hidden">
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Room</th>
+<th>Window #</th>
+<th>Type</th>
+<th>Sub-Type</th>
+<th>Width (mm)</th>
+<th>Drop (mm)</th>
+<th>Fit Type</th>
+<th>Area</th>
+<th>Alert</th>
+<th>Notes</th>
+<th>Del</th>
+</tr>
+</thead>
+<tbody id="windowsBody"></tbody>
+</table>
+</div>
+<button onclick="addWindow()" class="btn btn-teal" style="margin-top:15px">+ Add Window</button>
+</div>
+</div>
+
+<div id="liveSummary" class="hidden"></div>
+
+<div id="finalDetails" class="hidden">
+<div class="card">
+<h3 class="card-title">💰 Adjust Pricing (Optional)</h3>
+<div id="pricingAdjustments"></div>
+</div>
+
+<div class="card">
+<h3 class="card-title">🚚 Shipping Cost</h3>
+<input type="number" id="shippingCost" placeholder="0.00" value="0" style="width:200px">
+</div>
+</div>
+
+<div class="btn-row hidden" id="jobButtons">
+<button onclick="cancelJob()" class="btn btn-gray">← Cancel</button>
+<button onclick="showFinalDetails()" class="btn btn-teal" id="btnContinue" style="flex:2">Continue to Final Details →</button>
+<button onclick="saveJob()" class="btn btn-green" id="btnSave" class="hidden" style="flex:2">💾 Save Job</button>
+</div>
+</div>
+</div>
+
+<div id="viewSaved" class="hidden">
+<div id="savedJobsList"></div>
+</div>
+
+</div>
+
+<script>
+let currentJob=null;
+let jobs=[];
+let windowIdCounter=1;
+let showingFinalDetails=false;
+const GST_RATE=0.10;
+
+const defaultRates={
+'Blinds-Roller':110,'Blinds-Vertical':115,'Blinds-Zebra':120,'Blinds-Venetian':105,
+'Shutters':150,'Curtains-Sheer':80,'Curtains-Blockout':100,'Verishade':120
+};
+const defaultMultipliers={
+'Blinds-Roller':1.8,'Blinds-Vertical':1.8,'Blinds-Zebra':1.8,'Blinds-Venetian':1.8,
+'Shutters':2.0,'Curtains-Sheer':1.7,'Curtains-Blockout':1.7,'Verishade':2.0
+};
+
+function loadJobs(){
+const saved=localStorage.getItem('decovibes_jobs');
+if(saved){try{jobs=JSON.parse(saved)}catch(e){jobs=[]}}
+updateJobCount();
+loadSettings();
+}
+
+function saveJobs(){
+localStorage.setItem('decovibes_jobs',JSON.stringify(jobs));
+updateJobCount();
+}
+
+function loadSettings(){
+Object.keys(defaultRates).forEach(key=>{
+const saved=localStorage.getItem('rate-'+key);
+if(saved)defaultRates[key]=parseFloat(saved);
+document.getElementById('rate-'+key).value=defaultRates[key];
+});
+Object.keys(defaultMultipliers).forEach(key=>{
+const saved=localStorage.getItem('mult-'+key);
+if(saved)defaultMultipliers[key]=parseFloat(saved);
+document.getElementById('mult-'+key).value=defaultMultipliers[key];
+});
+}
+
+function saveSettings(){
+Object.keys(defaultRates).forEach(key=>{
+const val=parseFloat(document.getElementById('rate-'+key).value)||0;
+defaultRates[key]=val;
+localStorage.setItem('rate-'+key,val);
+});
+Object.keys(defaultMultipliers).forEach(key=>{
+const val=parseFloat(document.getElementById('mult-'+key).value)||1;
+defaultMultipliers[key]=val;
+localStorage.setItem('mult-'+key,val);
+});
+alert('✓ Settings saved!');
+document.getElementById('settingsPanel').classList.add('hidden');
+}
+
+function toggleSettings(){
+document.getElementById('settingsPanel').classList.toggle('hidden');
+}
+
+function updateJobCount(){
+document.getElementById('jobCount').textContent=jobs.length;
+}
+
+function showTab(tab){
+document.getElementById('btnMeasure').classList.toggle('active',tab==='measure');
+document.getElementById('btnJobs').classList.toggle('active',tab==='saved');
+document.getElementById('viewMeasure').classList.toggle('hidden',tab!=='measure');
+document.getElementById('viewSaved').classList.toggle('hidden',tab!=='saved');
+if(tab==='saved')renderSavedJobs();
+}
+
+function startNewJob(){
+currentJob={
+id:Date.now(),
+clientName:'',
+address:'',
+phone:'',
+email:'',
+date:new Date().toISOString().split('T')[0],
+windows:[],
+rates:{...defaultRates},
+multipliers:{...defaultMultipliers},
+shippingCost:0
+};
+showingFinalDetails=false;
+document.getElementById('emptyState').classList.add('hidden');
+document.getElementById('jobForm').classList.remove('hidden');
+document.getElementById('jobButtons').classList.remove('hidden');
+document.getElementById('clientName').value='';
+document.getElementById('address').value='';
+document.getElementById('phone').value='';
+document.getElementById('email').value='';
+document.getElementById('shippingCost').value='0';
+updateWindowsDisplay();
+}
+
+function addWindow(){
+const window={
+id:windowIdCounter++,
+room:'',
+windowNumber:'',
+type:'Blinds',
+subType:'Roller',
+width:'',
+drop:'',
+recessFit:false,
+faceFit:false,
+ceilingFit:false,
+notes:''
+};
+currentJob.windows.push(window);
+updateWindowsDisplay();
+}
+
+function updateWindowsDisplay(){
+if(currentJob.windows.length===0){
+document.getElementById('emptyWindows').classList.remove('hidden');
+document.getElementById('windowsTable').classList.add('hidden');
+document.getElementById('liveSummary').classList.add('hidden');
+}else{
+document.getElementById('emptyWindows').classList.add('hidden');
+document.getElementById('windowsTable').classList.remove('hidden');
+renderWindows();
+updateLiveSummary();
+}
+}
+
+function renderWindows(){
+const tbody=document.getElementById('windowsBody');
+tbody.innerHTML='';
+currentJob.windows.forEach((w,index)=>{
+const row=document.createElement('tr');
+const area=w.type==='Curtains'?((parseFloat(w.width)||0)/1000).toFixed(2)+'m':((parseFloat(w.width)||0)*(parseFloat(w.drop)||0)/1000000).toFixed(3)+'m²';
+const alert=getAlert(w);
+let fitTypeHtml='';
+if(w.type==='Blinds'){
+fitTypeHtml=`
+<div style="display:flex;flex-direction:column;gap:4px;font-size:12px">
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+<input type="checkbox" ${w.recessFit?'checked':''} onchange="updateWindowFit(${index},'recessFit',this.checked)" style="width:auto"> Recess
+</label>
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+<input type="checkbox" ${w.faceFit?'checked':''} onchange="updateWindowFit(${index},'faceFit',this.checked)" style="width:auto"> Face
+</label>
+</div>`;
+}else if(w.type==='Curtains'||w.type==='Verishade'){
+fitTypeHtml=`
+<div style="display:flex;flex-direction:column;gap:4px;font-size:12px">
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+<input type="checkbox" ${w.ceilingFit?'checked':''} onchange="updateWindowFit(${index},'ceilingFit',this.checked)" style="width:auto"> Ceiling
+</label>
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+<input type="checkbox" ${w.faceFit?'checked':''} onchange="updateWindowFit(${index},'faceFit',this.checked)" style="width:auto"> Face
+</label>
+</div>`;
+}else{
+fitTypeHtml='<span style="color:#9CA3AF">-</span>';
+}
+row.innerHTML=`
+<td><input type="text" value="${w.room}" onchange="updateWindowField(${index},'room',this.value)" placeholder="Room" style="width:120px;padding:8px"></td>
+<td><input type="text" value="${w.windowNumber||''}" onchange="updateWindowField(${index},'windowNumber',this.value)" placeholder="W#" style="width:80px;padding:8px"></td>
+<td>
+<select onchange="updateWindowField(${index},'type',this.value)" style="width:120px;padding:8px">
+<option ${w.type==='Blinds'?'selected':''}>Blinds</option>
+<option ${w.type==='Shutters'?'selected':''}>Shutters</option>
+<option ${w.type==='Curtains'?'selected':''}>Curtains</option>
+<option ${w.type==='Verishade'?'selected':''}>Verishade</option>
+</select>
+</td>
+<td>
+${w.type==='Blinds'||w.type==='Curtains'?`
+<select onchange="updateWindowField(${index},'subType',this.value)" style="width:120px;padding:8px">
+${w.type==='Blinds'?`
+<option ${w.subType==='Roller'?'selected':''}>Roller</option>
+<option ${w.subType==='Vertical'?'selected':''}>Vertical</option>
+<option ${w.subType==='Zebra'?'selected':''}>Zebra</option>
+<option ${w.subType==='Venetian'?'selected':''}>Venetian</option>
+`:''}
+${w.type==='Curtains'?`
+<option ${w.subType==='Sheer'?'selected':''}>Sheer</option>
+<option ${w.subType==='Blockout'?'selected':''}>Blockout</option>
+`:''}
+</select>
+`:'<span style="color:#9CA3AF">-</span>'}
+</td>
+<td><input type="number" value="${w.width}" onchange="updateWindowField(${index},'width',this.value)" placeholder="Width" style="width:100px;padding:8px"></td>
+<td><input type="number" value="${w.drop}" onchange="updateWindowField(${index},'drop',this.value)" placeholder="Drop" style="width:100px;padding:8px"></td>
+<td>${fitTypeHtml}</td>
+<td style="font-weight:600;color:#7BCCC4">${area}</td>
+<td>${alert?`<span style="background:#FEF3C7;color:#B8936D;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap">${alert}</span>`:''}</td>
+<td><input type="text" value="${w.notes}" onchange="updateWindowField(${index},'notes',this.value)" placeholder="Notes" style="width:150px;padding:8px"></td>
+<td style="text-align:center">
+<button onclick="deleteWindow(${index})" class="btn btn-red" style="padding:8px 12px;font-size:14px">✕</button>
+</td>
+`;
+tbody.appendChild(row);
+});
+}
+
+function updateWindowField(index,field,value){
+currentJob.windows[index][field]=value;
+if(field==='type'){
+if(value==='Blinds')currentJob.windows[index].subType='Roller';
+else if(value==='Curtains')currentJob.windows[index].subType='Sheer';
+else currentJob.windows[index].subType='';
+renderWindows();
+}
+if(field==='width'||field==='drop'){
+renderWindows();
+updateLiveSummary();
+}
+}
+
+function deleteWindow(index){
+currentJob.windows.splice(index,1);
+updateWindowsDisplay();
+}
+
+function updateWindowFit(index,field,checked){
+currentJob.windows[index][field]=checked;
+}
+
+function getAlert(window){
+const width=parseFloat(window.width)||0;
+const drop=parseFloat(window.drop)||0;
+if(window.type==='Blinds'&&width>2200){
+return 'Thick tube';
+}
+if(window.type==='Shutters'&&drop>1200){
+return 'Mid rail';
+}
+if(window.type==='Curtains'&&width>3000){
+return 'Extra ship';
+}
+return '';
+}
+
+function calculateTotals(job){
+let totals={};
+job.windows.forEach(w=>{
+const width=parseFloat(w.width)||0;
+const drop=parseFloat(w.drop)||0;
+if(width===0||drop===0)return;
+const key=w.type==='Blinds'?`Blinds-${w.subType}`:w.type==='Curtains'?`Curtains-${w.subType}`:w.type;
+if(!totals[key])totals[key]={totalWidth:0,sqm:0,supplyCost:0,markup:0,subtotal:0};
+totals[key].totalWidth+=width;
+if(w.type!=='Curtains')totals[key].sqm+=(width*drop)/1000000;
+});
+const rates=job.rates||defaultRates;
+const multipliers=job.multipliers||defaultMultipliers;
+Object.keys(totals).forEach(key=>{
+if(key.startsWith('Curtains-')){
+totals[key].supplyCost=(totals[key].totalWidth/1000)*rates[key];
+}else{
+totals[key].supplyCost=totals[key].sqm*rates[key];
+}
+const multiplier=multipliers[key]||1;
+const totalWithMultiplier=totals[key].supplyCost*multiplier;
+totals[key].markup=totalWithMultiplier-totals[key].supplyCost;
+totals[key].subtotal=totalWithMultiplier;
+});
+const totalSupplyCost=Object.values(totals).reduce((sum,t)=>sum+t.supplyCost,0);
+const totalMarkup=Object.values(totals).reduce((sum,t)=>sum+t.markup,0);
+const subtotalBeforeShipping=totalSupplyCost+totalMarkup;
+const shipping=job.shippingCost||0;
+const subtotalWithShipping=subtotalBeforeShipping+shipping;
+const gst=subtotalWithShipping*GST_RATE;
+const total=subtotalWithShipping+gst;
+const customerPrice=totalSupplyCost+shipping+((totalSupplyCost+shipping)*GST_RATE);
+return{totals,totalSupplyCost,totalMarkup,subtotalBeforeShipping,shipping,subtotalWithShipping,gst,total,customerPrice};
+}
+
+function updateLiveSummary(){
+const calc=calculateTotals(currentJob);
+if(!calc||calc.totalSupplyCost===0){
+document.getElementById('liveSummary').classList.add('hidden');
+return;
+}
+document.getElementById('liveSummary').classList.remove('hidden');
+let html='<div class="summary-card"><h3 style="margin:0 0 15px 0">💰 Live Quote Summary</h3>';
+html+='<div class="summary-grid">';
+html+=`<div class="summary-box"><div class="summary-label">Supply Cost</div><div class="summary-value">$${calc.totalSupplyCost.toFixed(2)}</div></div>`;
+html+=`<div class="summary-box"><div class="summary-label">Customer (no markup)</div><div class="summary-value">$${calc.customerPrice.toFixed(2)}</div></div>`;
+html+=`<div class="summary-box" style="background:rgba(255,255,255,0.3)"><div class="summary-label">Quote Price</div><div class="summary-value">$${calc.total.toFixed(2)}</div></div>`;
+html+='</div>';
+html+=`<div style="margin-top:15px;font-size:14px;opacity:0.9">Markup: $${calc.totalMarkup.toFixed(2)} • GST: $${calc.gst.toFixed(2)}</div>`;
+html+='</div>';
+document.getElementById('liveSummary').innerHTML=html;
+}
+
+function showFinalDetails(){
+currentJob.clientName=document.getElementById('clientName').value;
+if(!currentJob.clientName){
+alert('Please enter client name');
+return;
+}
+currentJob.address=document.getElementById('address').value;
+currentJob.phone=document.getElementById('phone').value;
+currentJob.email=document.getElementById('email').value;
+currentJob.shippingCost=parseFloat(document.getElementById('shippingCost').value)||0;
+showingFinalDetails=true;
+document.getElementById('btnContinue').classList.add('hidden');
+document.getElementById('btnSave').classList.remove('hidden');
+document.getElementById('finalDetails').classList.remove('hidden');
+renderPricingAdjustments();
+updateLiveSummary();
+}
+
+function renderPricingAdjustments(){
+const usedTypes=new Set();
+currentJob.windows.forEach(w=>{
+const key=w.type==='Blinds'?`Blinds-${w.subType}`:w.type==='Curtains'?`Curtains-${w.subType}`:w.type;
+usedTypes.add(key);
+});
+let html='<table class="price-table">';
+html+='<tr><th style="text-align:left">Product</th><th>Rate</th><th>Multiplier</th></tr>';
+Array.from(usedTypes).forEach(key=>{
+const unit=key.startsWith('Curtains-')?'$/m':'$/m²';
+html+=`<tr><td style="font-weight:600">${key.replace('-',' - ')}</td>`;
+html+=`<td><input type="number" id="jobrate-${key}" value="${currentJob.rates[key]}" oninput="updateJobRates()" style="width:100px;padding:8px"> ${unit}</td>`;
+html+=`<td><input type="number" step="0.1" id="jobmult-${key}" value="${currentJob.multipliers[key]}" oninput="updateJobRates()" style="width:100px;padding:8px"> x</td>`;
+html+='</tr>';
+});
+html+='</table>';
+document.getElementById('pricingAdjustments').innerHTML=html;
+}
+
+function updateJobRates(){
+const usedTypes=new Set();
+currentJob.windows.forEach(w=>{
+const key=w.type==='Blinds'?`Blinds-${w.subType}`:w.type==='Curtains'?`Curtains-${w.subType}`:w.type;
+usedTypes.add(key);
+});
+Array.from(usedTypes).forEach(key=>{
+currentJob.rates[key]=parseFloat(document.getElementById('jobrate-'+key).value)||0;
+currentJob.multipliers[key]=parseFloat(document.getElementById('jobmult-'+key).value)||1;
+});
+currentJob.shippingCost=parseFloat(document.getElementById('shippingCost').value)||0;
+updateLiveSummary();
+}
+
+function saveJob(){
+currentJob.savedAt=new Date().toISOString();
+jobs.push(currentJob);
+saveJobs();
+currentJob=null;
+showingFinalDetails=false;
+document.getElementById('emptyState').classList.remove('hidden');
+document.getElementById('jobForm').classList.add('hidden');
+document.getElementById('jobButtons').classList.add('hidden');
+document.getElementById('finalDetails').classList.add('hidden');
+document.getElementById('btnContinue').classList.remove('hidden');
+document.getElementById('btnSave').classList.add('hidden');
+showTab('saved');
+}
+
+function cancelJob(){
+if(confirm('Cancel this job? All data will be lost.')){
+currentJob=null;
+showingFinalDetails=false;
+document.getElementById('emptyState').classList.remove('hidden');
+document.getElementById('jobForm').classList.add('hidden');
+document.getElementById('jobButtons').classList.add('hidden');
+document.getElementById('finalDetails').classList.add('hidden');
+document.getElementById('btnContinue').classList.remove('hidden');
+document.getElementById('btnSave').classList.add('hidden');
+}
+}
+
+function renderSavedJobs(){
+const container=document.getElementById('savedJobsList');
+if(jobs.length===0){
+container.innerHTML=`
+<div class="card">
+<div class="empty-state">
+<div class="empty-icon">📂</div>
+<h2 class="empty-title">No Saved Jobs</h2>
+<p class="empty-text">Start measuring to create your first job</p>
+</div>
+</div>
+`;
+}else{
+container.innerHTML=jobs.map((job,index)=>{
+const calc=calculateTotals(job);
+return`
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:15px;flex-wrap:wrap;gap:10px">
+<div>
+<h3 style="margin:0 0 8px 0;font-size:24px;color:#7BCCC4">${job.clientName}</h3>
+<p style="margin:4px 0;color:#6B7280;font-size:14px">${job.address}</p>
+<p style="margin:4px 0;color:#6B7280;font-size:14px">${job.phone}</p>
+<p style="margin:4px 0;color:#6B7280;font-size:14px">Windows: ${job.windows.length} • Date: ${job.date}</p>
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<button onclick="exportJob(${index})" class="btn btn-teal" style="padding:12px 20px">📋 Copy</button>
+<button onclick="downloadJob(${index})" class="btn" style="padding:12px 20px;background:#10B981;color:white">💾 Download</button>
+<button onclick="deleteJob(${index})" class="btn btn-red" style="padding:12px 20px">🗑️</button>
+</div>
+</div>
+<div class="summary-grid">
+<div style="background:#EBF5FF;padding:15px;border-radius:8px"><div style="font-size:12px;color:#1E40AF;margin-bottom:5px">Supply Cost</div><div style="font-size:22px;font-weight:700;color:#1E40AF">$${calc.totalSupplyCost.toFixed(2)}</div></div>
+<div style="background:#FEF3C7;padding:15px;border-radius:8px"><div style="font-size:12px;color:#B8936D;margin-bottom:5px">Customer (no markup)</div><div style="font-size:22px;font-weight:700;color:#B8936D">$${calc.customerPrice.toFixed(2)}</div></div>
+<div style="background:#D1FAE5;padding:15px;border-radius:8px"><div style="font-size:12px;color:#047857;margin-bottom:5px">Quote Price</div><div style="font-size:24px;font-weight:700;color:#047857">$${calc.total.toFixed(2)}</div></div>
+</div>
+</div>
+`;
+}).join('');
+}
+}
+
+function exportJob(index){
+const job=jobs[index];
+const calc=calculateTotals(job);
+let report=generateReport(job,calc);
+navigator.clipboard.writeText(report).then(()=>{
+alert('✓ Report copied to clipboard!');
+}).catch(()=>{
+alert('Unable to copy. Use Download button instead.');
+});
+}
+
+function downloadJob(index){
+const job=jobs[index];
+const calc=calculateTotals(job);
+let report=generateReport(job,calc);
+const blob=new Blob([report],{type:'text/plain'});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;
+a.download=`Decovibes_${job.clientName.replace(/\s+/g,'_')}_${job.date}.txt`;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+}
+
+function generateReport(job,calc){
+let report=`DECOVIBES - MEASUREMENT REPORT\n\nClient: ${job.clientName}\nAddress: ${job.address}\nPhone: ${job.phone}\nDate: ${job.date}\n\nWINDOWS:\n${'='.repeat(50)}\n`;
+job.windows.forEach((w,i)=>{
+const windowNum=w.windowNumber?`${w.windowNumber} - `:'';
+report+=`${i+1}. ${w.room||'Room'} ${windowNum}${w.type}`;
+if(w.subType)report+=` (${w.subType})`;
+report+=`\n   ${w.width}mm W × ${w.drop}mm D\n`;
+const fitTypes=[];
+if(w.type==='Blinds'){
+if(w.recessFit)fitTypes.push('✓ Recess');
+if(w.faceFit)fitTypes.push('✓ Face');
+}else if(w.type==='Curtains'||w.type==='Verishade'){
+if(w.ceilingFit)fitTypes.push('✓ Ceiling');
+if(w.faceFit)fitTypes.push('✓ Face');
+}
+if(fitTypes.length>0)report+=`   Fit: ${fitTypes.join(', ')}\n`;
+if(w.notes)report+=`   Notes: ${w.notes}\n`;
+const alert=getAlert(w);
+if(alert)report+=`   Alert: ${alert}\n`;
+report+=`\n`;
+});
+report+=`\nPRICING:\n${'='.repeat(50)}\n`;
+report+=`Supply Cost: $${calc.totalSupplyCost.toFixed(2)}\n`;
+report+=`Markup: $${calc.totalMarkup.toFixed(2)}\n`;
+report+=`Shipping: $${calc.shipping.toFixed(2)}\n`;
+report+=`GST (10%): $${calc.gst.toFixed(2)}\n\n`;
+report+=`CUSTOMER PRICE (no markup, Inc GST): $${calc.customerPrice.toFixed(2)}\n`;
+report+=`QUOTE PRICE (with markup, Inc GST): $${calc.total.toFixed(2)}\n`;
+return report;
+}
+
+function deleteJob(index){
+if(confirm('Delete this job?')){
+jobs.splice(index,1);
+saveJobs();
+renderSavedJobs();
+}
+}
+
+function updateNetworkStatus(){
+const indicator=document.getElementById('network-status');
+if(navigator.onLine){
+indicator.className='status online';
+indicator.textContent='● Online';
+}else{
+indicator.className='status offline';
+indicator.textContent='● Offline';
+}
+}
+
+window.addEventListener('online',updateNetworkStatus);
+window.addEventListener('offline',updateNetworkStatus);
+window.addEventListener('load',()=>{
+loadJobs();
+if('serviceWorker'in navigator){
+navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+}
+});
+</script>
+</body>
+</html>
