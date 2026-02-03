@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Measurement Pro - Decovibes</title>
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#F5EFE7 0%,#E8DED0 100%);min-height:100vh;padding:20px}
@@ -56,10 +54,35 @@ tr:hover{background:#F9FAFB}
 .price-table td{padding:8px}
 .price-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.2)}
 .price-row:last-child{border-bottom:2px solid rgba(255,255,255,0.4);font-weight:700;font-size:18px}
+.alert-badge{background:#FEF3C7;color:#92400E;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center}
+.modal.active{display:flex}
+.modal-content{background:white;padding:30px;border-radius:12px;max-width:500px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3)}
+.modal-title{color:#DC2626;font-size:24px;margin-bottom:15px;font-weight:700}
+.freight-note{background:#E0F2FE;border-left:4px solid#0284C7;padding:12px;margin:10px 0;font-size:13px;color:#075985}
 </style>
 </head>
 <body>
 <div id="network-status" class="status online">● Online</div>
+
+<!-- Mid Rail Modal -->
+<div id="midRailModal" class="modal">
+<div class="modal-content">
+<h2 class="modal-title">⚠️ Mid Rail Required!</h2>
+<p style="margin-bottom:20px;color:#666">This shutter exceeds 1200mm in drop. A mid rail is mandatory.</p>
+<div style="background:#FEE2E2;padding:15px;border-radius:8px;margin-bottom:20px">
+<strong style="color:#DC2626">Window: <span id="modalWindowInfo"></span></strong><br>
+<span style="color:#666">Drop: <span id="modalWindowDrop"></span>mm</span>
+</div>
+<label style="display:block;margin-bottom:10px;font-weight:600">Mid Rail Position (mm from top):</label>
+<input type="number" id="midRailPosition" placeholder="e.g. 600" style="width:100%;padding:12px;margin-bottom:20px">
+<div style="display:flex;gap:10px">
+<button class="btn btn-gray" onclick="closeMidRailModal()" style="flex:1">Cancel</button>
+<button class="btn btn-teal" onclick="saveMidRail()" style="flex:1">✓ Save</button>
+</div>
+</div>
+</div>
+
 <div class="container">
 <div class="header">
 <div class="header-content">
@@ -77,58 +100,169 @@ tr:hover{background:#F9FAFB}
 </div>
 </div>
 <div id="settingsPanel" class="settings-panel hidden">
-<h3 style="color:#7BCCC4;margin-bottom:15px">⚙️ Default Rates & Multipliers</h3>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:15px">
+<h3 style="color:#7BCCC4;margin-bottom:20px;font-size:24px">⚙️ Settings</h3>
+
+<!-- Xero Integration -->
+<div style="background:linear-gradient(135deg,#E0F2FE 0%,#BAE6FD 100%);border:3px solid #0284C7;padding:25px;border-radius:12px;margin-bottom:30px">
+<h4 style="color:#0369A1;margin-bottom:15px;font-size:20px;font-weight:700">📤 Xero Integration</h4>
+<p style="color:#1F2937;font-size:15px;margin-bottom:20px;font-weight:500">Connect your Xero account to send quotes directly</p>
+
+<div style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:15px;margin-bottom:20px;border-radius:6px">
+<p style="color:#92400E;font-weight:700;margin-bottom:8px">⚠️ Your Redirect URI for Xero:</p>
+<div style="display:flex;gap:10px;align-items:center">
+<input type="text" id="currentRedirectUri" readonly value="https://measure.decovibes.com.au" onclick="this.select()" style="flex:1;padding:12px;border:2px solid #F59E0B;border-radius:6px;font-family:monospace;font-size:15px;background:#FFFBEB;color:#92400E;font-weight:700;cursor:pointer">
+<button onclick="copyRedirectUri()" style="padding:12px 20px;background:#F59E0B;color:white;border:none;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap">📋 Copy</button>
+</div>
+<p style="color:#78350F;font-size:12px;margin-top:8px;font-weight:600">👆 Click the box to select, or click "Copy" button. Use this EXACT URL in your Xero app!</p>
+</div>
+
+<div style="display:grid;gap:15px;max-width:600px">
 <div>
-<strong style="color:#B8936D">Blinds ($/m²)</strong>
-<table style="width:100%;margin-top:10px;font-size:14px">
-<tr><td>Roller</td><td><input type="number" id="rate-Blinds-Roller" value="110" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Blinds-Roller" value="1.8" style="width:80px;padding:6px"></td></tr>
-<tr><td>Vertical</td><td><input type="number" id="rate-Blinds-Vertical" value="115" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Blinds-Vertical" value="1.8" style="width:80px;padding:6px"></td></tr>
-<tr><td>Zebra</td><td><input type="number" id="rate-Blinds-Zebra" value="120" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Blinds-Zebra" value="1.8" style="width:80px;padding:6px"></td></tr>
-<tr><td>Venetian</td><td><input type="number" id="rate-Blinds-Venetian" value="105" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Blinds-Venetian" value="1.8" style="width:80px;padding:6px"></td></tr>
+<label style="display:block;color:#0F172A;font-weight:600;margin-bottom:8px;font-size:14px">Xero Client ID:</label>
+<input type="text" id="xeroClientId" placeholder="Enter your Xero Client ID" style="width:100%;padding:12px;border:2px solid #0284C7;border-radius:8px;font-size:14px">
+</div>
+<div>
+<label style="display:block;color:#0F172A;font-weight:600;margin-bottom:8px;font-size:14px">Xero Client Secret:</label>
+<input type="password" id="xeroClientSecret" placeholder="Enter your Xero Client Secret" style="width:100%;padding:12px;border:2px solid #0284C7;border-radius:8px;font-size:14px">
+</div>
+<div style="display:flex;align-items:center;gap:15px">
+<button class="btn" style="background:#0284C7;color:white;padding:12px 24px" onclick="connectXero()">🔗 Connect to Xero</button>
+<span id="xeroStatus" style="font-weight:700;font-size:15px"></span>
+</div>
+</div>
+
+<details style="margin-top:20px" open>
+<summary style="cursor:pointer;color:#0369A1;font-weight:700;font-size:14px">📖 Setup Instructions (Click to expand)</summary>
+<div style="margin-top:15px;padding:20px;background:white;border-radius:8px;border:2px solid #0284C7">
+<p style="font-weight:700;color:#0369A1;margin-bottom:15px;font-size:15px">Follow these steps to connect Xero:</p>
+<ol style="padding-left:25px;line-height:2;color:#1F2937">
+<li><strong>Visit Xero Developer Portal:</strong><br>
+<a href="https://developer.xero.com/myapps" target="_blank" style="color:#0284C7;text-decoration:underline;font-weight:600">https://developer.xero.com/myapps</a><br>
+<span style="color:#6B7280;font-size:13px">(Login with your Xero credentials)</span>
+</li>
+<li><strong>Create New App:</strong><br>
+Click <strong>"New app"</strong> button → Choose <strong>"Web app"</strong>
+</li>
+<li><strong>Fill App Details:</strong><br>
+• App name: <code style="background:#F1F5F9;padding:3px 8px;border-radius:4px;font-weight:600">Decovibes Measurement Pro</code><br>
+• Company URL: <em>Your website URL</em><br>
+• <strong style="color:#DC2626">Redirect URI (CRITICAL!):</strong><br>
+<span style="background:#FEE2E2;padding:8px;border-radius:4px;display:inline-block;margin-top:5px;font-weight:700;color:#DC2626">👆 Copy the EXACT URL from the yellow box above!</span><br>
+<span style="font-size:12px;color:#DC2626">⚠️ It MUST match exactly - including http/https, with/without trailing slash</span>
+</li>
+<li><strong>Save and Get Credentials:</strong><br>
+After saving, you'll see <strong>"OAuth 2.0 Credentials"</strong> section:<br>
+• <strong>Client ID:</strong> Copy the long string shown<br>
+• <strong>Client Secret:</strong> Click <strong>"Generate a secret"</strong> → Copy immediately<br>
+<span style="color:#DC2626;font-weight:600">⚠️ The secret shows only ONCE - save it!</span>
+</li>
+<li><strong>Paste Above and Connect:</strong><br>
+Paste both values above → Click "Connect to Xero" → Authorize → Done!
+</li>
+</ol>
+</div>
+</details>
+</div>
+
+<!-- Rates & Multipliers -->
+<h4 style="color:#7BCCC4;margin-bottom:15px;font-size:18px">Default Rates & Multipliers</h4>
+<p style="color:#6B7280;font-size:14px;margin-bottom:15px">Base rates for quick estimates. Type decimals like 1.8 or 2.5 in multiplier column</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px">
+<div>
+<strong style="color:#B8936D;display:block;margin-bottom:10px">Blinds ($/m²)</strong>
+<table style="width:100%;border-collapse:collapse">
+<thead>
+<tr style="background:#E5E7EB">
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Product</th>
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Rate</th>
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Mult</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:6px;color:#1F2937">Roller</td><td style="padding:6px"><input type="number" id="rate-Blinds-Roller" value="35" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Blinds-Roller" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+<tr><td style="padding:6px;color:#1F2937">Trublockout</td><td style="padding:6px"><input type="number" id="rate-Blinds-Trublockout" value="500" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Blinds-Trublockout" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+<tr><td style="padding:6px;color:#1F2937">Vertical</td><td style="padding:6px"><input type="number" id="rate-Blinds-Vertical" value="85" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Blinds-Vertical" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+<tr><td style="padding:6px;color:#1F2937">Zebra</td><td style="padding:6px"><input type="number" id="rate-Blinds-Zebra" value="110" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Blinds-Zebra" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+<tr><td style="padding:6px;color:#1F2937">Venetian</td><td style="padding:6px"><input type="number" id="rate-Blinds-Venetian" value="95" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Blinds-Venetian" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+</tbody>
 </table>
 </div>
 <div>
-<strong style="color:#B8936D">Curtains ($/m)</strong>
-<table style="width:100%;margin-top:10px;font-size:14px">
-<tr><td>Sheer</td><td><input type="number" id="rate-Curtains-Sheer" value="80" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Curtains-Sheer" value="1.7" style="width:80px;padding:6px"></td></tr>
-<tr><td>Blockout</td><td><input type="number" id="rate-Curtains-Blockout" value="100" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Curtains-Blockout" value="1.7" style="width:80px;padding:6px"></td></tr>
+<strong style="color:#B8936D;display:block;margin-bottom:10px">Curtains ($/m)</strong>
+<table style="width:100%;border-collapse:collapse">
+<thead>
+<tr style="background:#E5E7EB">
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Product</th>
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Rate</th>
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Mult</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:6px;color:#1F2937">Sheer</td><td style="padding:6px"><input type="number" id="rate-Curtains-Sheer" value="105" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Curtains-Sheer" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+<tr><td style="padding:6px;color:#1F2937">Blockout</td><td style="padding:6px"><input type="number" id="rate-Curtains-Blockout" value="145" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Curtains-Blockout" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+</tbody>
 </table>
 </div>
 <div>
-<strong style="color:#B8936D">Other Products ($/m²)</strong>
-<table style="width:100%;margin-top:10px;font-size:14px">
-<tr><td>Shutters</td><td><input type="number" id="rate-Shutters" value="150" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Shutters" value="2.0" style="width:80px;padding:6px"></td></tr>
-<tr><td>Verishade</td><td><input type="number" id="rate-Verishade" value="120" style="width:80px;padding:6px"></td><td><input type="number" step="0.1" id="mult-Verishade" value="2.0" style="width:80px;padding:6px"></td></tr>
+<strong style="color:#B8936D;display:block;margin-bottom:10px">Other Products ($/m²)</strong>
+<table style="width:100%;border-collapse:collapse">
+<thead>
+<tr style="background:#E5E7EB">
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Product</th>
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Rate</th>
+<th style="padding:8px;text-align:left;color:#374151;font-size:13px">Mult</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="padding:6px;color:#1F2937">Shutters</td><td style="padding:6px"><input type="number" id="rate-Shutters" value="850" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Shutters" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+<tr><td style="padding:6px;color:#1F2937">Verishade</td><td style="padding:6px"><input type="number" id="rate-Verishade" value="380" style="width:70px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td><td style="padding:6px"><input id="mult-Verishade" value="1.8" style="width:60px;padding:6px;border:1px solid #D1D5DB;border-radius:4px"></td></tr>
+</tbody>
 </table>
 </div>
 </div>
-<button onclick="saveSettings()" class="btn btn-teal" style="margin-top:15px">💾 Save Settings</button>
+<div style="margin-top:20px;border-top:2px solid #E5E7EB;padding-top:20px">
+<strong style="color:#B8936D">🚚 Freight Carrier</strong>
+<p style="color:#666;font-size:13px;margin:10px 0">Freight calculated automatically and distributed evenly</p>
+<div style="margin-top:10px">
+<label style="display:block;margin-bottom:10px">
+<input type="radio" name="freightCarrier" value="betta" checked onchange="saveSettings()"> 
+<strong>Betta Blinds Freight</strong>
+</label>
+<label style="display:block;margin-bottom:10px">
+<input type="radio" name="freightCarrier" value="other" onchange="saveSettings()"> 
+<strong>Other Freight Carriers</strong>
+</label>
+<label style="display:block;margin-bottom:10px">
+<input type="radio" name="freightCarrier" value="none" onchange="saveSettings()"> 
+<strong>No Freight</strong>
+</label>
+</div>
+</div>
+<button class="btn btn-teal" style="margin-top:20px" onclick="saveSettings()">💾 Save Settings</button>
 </div>
 </div>
 
 <div id="viewMeasure">
 <div id="emptyState" class="card">
 <div class="empty-state">
-<div class="empty-icon">📐</div>
-<h2 class="empty-title">Start New Measurement</h2>
-<p class="empty-text">Create a professional quote for your client</p>
-<button onclick="startNewJob()" class="btn btn-teal">+ New Job</button>
+<div class="empty-icon">📏</div>
+<h2 class="empty-title">Ready to Start Measuring?</h2>
+<p class="empty-text">Create a new job to begin taking window measurements</p>
+<button class="btn btn-teal" onclick="startNewJob()">➕ Start New Job</button>
 </div>
 </div>
 
-<div id="jobForm" class="hidden">
-<div class="card">
-<h3 class="card-title">📋 Client Information</h3>
+<div id="jobForm" class="card hidden">
+<h2 class="card-title">📋 Client Details</h2>
 <div class="form-grid">
-<input type="text" id="clientName" placeholder="Client Name *">
+<input type="text" id="clientName" placeholder="Client Name *" required>
 <input type="text" id="address" placeholder="Address">
 <input type="tel" id="phone" placeholder="Phone">
 <input type="email" id="email" placeholder="Email">
 </div>
 </div>
 
-<div class="card">
+<div class="card hidden" id="windowsCard">
 <h3 class="card-title">📏 Window Measurements</h3>
 <div id="emptyWindows" class="empty-state" style="padding:40px">
 <p style="color:#6B7280;margin-bottom:15px;font-size:16px">No windows added yet</p>
@@ -164,44 +298,109 @@ tr:hover{background:#F9FAFB}
 <div id="finalDetails" class="hidden">
 <div class="card">
 <h3 class="card-title">💰 Adjust Pricing (Optional)</h3>
+<p style="color:#666;font-size:14px;margin-bottom:15px">Select fabric and adjust rates. Type decimals like 1.8 or 2.5</p>
 <div id="pricingAdjustments"></div>
-</div>
-
-<div class="card">
-<h3 class="card-title">🚚 Shipping Cost</h3>
-<input type="number" id="shippingCost" placeholder="0.00" value="0" style="width:200px">
 </div>
 </div>
 
 <div class="btn-row hidden" id="jobButtons">
 <button onclick="cancelJob()" class="btn btn-gray">← Cancel</button>
 <button onclick="showFinalDetails()" class="btn btn-teal" id="btnContinue" style="flex:2">Continue to Final Details →</button>
-<button onclick="saveJob()" class="btn btn-green" id="btnSave" class="hidden" style="flex:2">💾 Save Job</button>
-</div>
+<button onclick="saveJob()" class="btn btn-green hidden" id="btnSave" style="flex:2">💾 Save Job</button>
 </div>
 </div>
 
-<div id="viewSaved" class="hidden">
+<div id="viewSaved" class="card hidden">
+<h2 class="card-title">💾 Saved Jobs</h2>
 <div id="savedJobsList"></div>
 </div>
-
 </div>
 
 <script>
-let currentJob=null;
+const GST_RATE=0.1;
 let jobs=[];
+let currentJob=null;
 let windowIdCounter=1;
 let showingFinalDetails=false;
-const GST_RATE=0.10;
+let currentMidRailWindowIndex=null;
+let freightCarrier='betta';
+let xeroAccessToken=null;
+let xeroTenantId=null;
+let xeroConnected=false;
 
-const defaultRates={
-'Blinds-Roller':110,'Blinds-Vertical':115,'Blinds-Zebra':120,'Blinds-Venetian':105,
-'Shutters':150,'Curtains-Sheer':80,'Curtains-Blockout':100,'Verishade':120
+const PRICE_LISTS = {
+  rollerBlinds: {'Vibe': 30, 'Kleen Screen 5%': 30, 'Kew': 33, 'Toorak': 37, 'Cottesloe': 37, 'Sanctuary': 37, 'Le-Reve': 43, 'Balmoral': 45, 'Linesque': 48, 'Cassette Zebra Classic': 110, 'Cassette Zebra Opera': 100, 'Cassette Zebra Modern': 100, 'Cassette Zebra Luxury': 100},
+  verticalBlinds: {'Builders Range': 70, 'Category A': 80, 'Category B': 85, 'Category C': 95, 'Category D': 110, 'Category E': 125, 'Category F': 140, 'Category G': 175, 'Category H': 195, 'Category I': 220, 'Category J': 250},
+  curtainsSheer: {'Budget Range': 94, 'Group 1 - Most Trending': 105, 'Group 2 - Classic': 110, 'Group 3 - Designer': 120, 'Group 4 - Premium': 125},
+  curtainsBlockout: {'Group 1 - Budget': 135, 'Group 1 - Vertex': 140, 'Group 1 - Nettex': 145, 'Group 2': 148, 'Group 3 - Velvet': 150, 'Premium Velvet': 195},
+  verishade: {'Category 1 - Wand': 350, 'Category 1 - Motorised': 510, 'Category 2 - Wand': 380, 'Category 2 - Motorised': 540, 'S Range - Wand': 420, 'S Range - Motorised': 580}
 };
-const defaultMultipliers={
-'Blinds-Roller':1.8,'Blinds-Vertical':1.8,'Blinds-Zebra':1.8,'Blinds-Venetian':1.8,
-'Shutters':2.0,'Curtains-Sheer':1.7,'Curtains-Blockout':1.7,'Verishade':2.0
-};
+
+const defaultRates={'Blinds-Roller':35,'Blinds-Trublockout':500,'Blinds-Vertical':85,'Blinds-Zebra':110,'Blinds-Venetian':95,'Shutters':850,'Curtains-Sheer':105,'Curtains-Blockout':145,'Verishade':380};
+const defaultMultipliers={'Blinds-Roller':1.8,'Blinds-Trublockout':1.8,'Blinds-Vertical':1.8,'Blinds-Zebra':1.8,'Blinds-Venetian':1.8,'Shutters':1.8,'Curtains-Sheer':1.8,'Curtains-Blockout':1.8,'Verishade':1.8};
+
+function calculateFreight(){
+if(freightCarrier==='none')return 0;
+let freight=0,hasOverLength4000=false,hasOverLength3900=false,hasOverLength1900=false,hasLargeWidth2500=false,blindCount=0;
+currentJob.windows.forEach(w=>{
+const width=parseFloat(w.width)||0;
+if(width>4000)hasOverLength4000=true;
+if(width>3900)hasOverLength3900=true;
+if(width>=1900)hasOverLength1900=true;
+if(width>=2500)hasLargeWidth2500=true;
+blindCount++;
+});
+if(freightCarrier==='betta'){
+freight+=22;
+if(hasOverLength4000)freight+=62;
+if(hasLargeWidth2500)freight+=30;
+}else if(freightCarrier==='other'){
+freight+=30+30*blindCount+22;
+if(hasOverLength3900)freight+=95;
+else if(hasOverLength1900)freight+=18;
+if(hasLargeWidth2500)freight+=30;
+}
+return freight;
+}
+
+function getAlert(w){
+const width=parseFloat(w.width)||0;
+const drop=parseFloat(w.drop)||0;
+const alerts=[];
+if(w.type==='Blinds'&&width>2200)alerts.push('Thick tube');
+if(w.type==='Shutters'&&drop>1200)alerts.push('Mid rail');
+if(w.type==='Curtains'&&width>3000)alerts.push('Extra ship');
+return alerts.join(', ');
+}
+
+function checkMidRailRequired(index){
+const w=currentJob.windows[index];
+if(w.type==='Shutters'){
+const drop=parseFloat(w.drop)||0;
+if(drop>1200&&!w.midRailPosition){
+currentMidRailWindowIndex=index;
+document.getElementById('modalWindowInfo').textContent=(w.room||'Unnamed')+' - Window '+(w.windowNumber||'#'+(index+1));
+document.getElementById('modalWindowDrop').textContent=drop;
+document.getElementById('midRailPosition').value=w.midRailPosition||'';
+document.getElementById('midRailModal').classList.add('active');
+return false;
+}
+}
+return true;
+}
+
+function closeMidRailModal(){
+document.getElementById('midRailModal').classList.remove('active');
+currentMidRailWindowIndex=null;
+}
+
+function saveMidRail(){
+const position=parseFloat(document.getElementById('midRailPosition').value);
+if(!position||position<=0){alert('Please enter a valid mid rail position');return;}
+if(currentMidRailWindowIndex!==null)currentJob.windows[currentMidRailWindowIndex].midRailPosition=position;
+closeMidRailModal();
+renderWindows();
+}
 
 function loadJobs(){
 const saved=localStorage.getItem('decovibes_jobs');
@@ -219,28 +418,44 @@ function loadSettings(){
 Object.keys(defaultRates).forEach(key=>{
 const saved=localStorage.getItem('rate-'+key);
 if(saved)defaultRates[key]=parseFloat(saved);
-document.getElementById('rate-'+key).value=defaultRates[key];
+const el=document.getElementById('rate-'+key);
+if(el)el.value=defaultRates[key];
 });
 Object.keys(defaultMultipliers).forEach(key=>{
 const saved=localStorage.getItem('mult-'+key);
 if(saved)defaultMultipliers[key]=parseFloat(saved);
-document.getElementById('mult-'+key).value=defaultMultipliers[key];
+const el=document.getElementById('mult-'+key);
+if(el)el.value=defaultMultipliers[key];
 });
+const savedFreight=localStorage.getItem('freightCarrier')||'betta';
+freightCarrier=savedFreight;
+const radios=document.getElementsByName('freightCarrier');
+radios.forEach(r=>{if(r.value===savedFreight)r.checked=true});
 }
 
 function saveSettings(){
 Object.keys(defaultRates).forEach(key=>{
-const val=parseFloat(document.getElementById('rate-'+key).value)||0;
+const el=document.getElementById('rate-'+key);
+if(el){
+const val=parseFloat(el.value)||0;
 defaultRates[key]=val;
 localStorage.setItem('rate-'+key,val);
+}
 });
 Object.keys(defaultMultipliers).forEach(key=>{
-const val=parseFloat(document.getElementById('mult-'+key).value)||1;
+const el=document.getElementById('mult-'+key);
+if(el){
+const val=parseFloat(el.value)||1;
 defaultMultipliers[key]=val;
 localStorage.setItem('mult-'+key,val);
+}
 });
+const selectedFreight=document.querySelector('input[name="freightCarrier"]:checked')?.value||'betta';
+freightCarrier=selectedFreight;
+localStorage.setItem('freightCarrier',selectedFreight);
 alert('✓ Settings saved!');
 document.getElementById('settingsPanel').classList.add('hidden');
+if(currentJob)updateLiveSummary();
 }
 
 function toggleSettings(){
@@ -260,45 +475,21 @@ if(tab==='saved')renderSavedJobs();
 }
 
 function startNewJob(){
-currentJob={
-id:Date.now(),
-clientName:'',
-address:'',
-phone:'',
-email:'',
-date:new Date().toISOString().split('T')[0],
-windows:[],
-rates:{...defaultRates},
-multipliers:{...defaultMultipliers},
-shippingCost:0
-};
+currentJob={id:Date.now(),clientName:'',address:'',phone:'',email:'',date:new Date().toISOString().split('T')[0],windows:[],rates:{...defaultRates},multipliers:{...defaultMultipliers},freightCost:0,freightCarrier:freightCarrier};
 showingFinalDetails=false;
 document.getElementById('emptyState').classList.add('hidden');
 document.getElementById('jobForm').classList.remove('hidden');
+document.getElementById('windowsCard').classList.remove('hidden');
 document.getElementById('jobButtons').classList.remove('hidden');
 document.getElementById('clientName').value='';
 document.getElementById('address').value='';
 document.getElementById('phone').value='';
 document.getElementById('email').value='';
-document.getElementById('shippingCost').value='0';
 updateWindowsDisplay();
 }
 
 function addWindow(){
-const window={
-id:windowIdCounter++,
-room:'',
-windowNumber:'',
-type:'Blinds',
-subType:'Roller',
-width:'',
-drop:'',
-recessFit:false,
-faceFit:false,
-ceilingFit:false,
-notes:''
-};
-currentJob.windows.push(window);
+currentJob.windows.push({id:windowIdCounter++,room:'',windowNumber:'',type:'Blinds',subType:'Roller',fabricType:'Toorak',width:'',drop:'',recessFit:false,faceFit:false,ceilingFit:false,notes:'',midRailPosition:null});
 updateWindowsDisplay();
 }
 
@@ -319,110 +510,75 @@ function renderWindows(){
 const tbody=document.getElementById('windowsBody');
 tbody.innerHTML='';
 currentJob.windows.forEach((w,index)=>{
-const row=document.createElement('tr');
-const area=w.type==='Curtains'?((parseFloat(w.width)||0)/1000).toFixed(2)+'m':((parseFloat(w.width)||0)*(parseFloat(w.drop)||0)/1000000).toFixed(3)+'m²';
-const alert=getAlert(w);
+const width=parseFloat(w.width)||0;
+const drop=parseFloat(w.drop)||0;
+const areaCalc=w.type==='Curtains'?(width/1000):(width*drop/1000000);
+const areaText=w.type==='Curtains'?areaCalc.toFixed(2)+'m':areaCalc.toFixed(3)+'m²';
+const alertText=getAlert(w);
 let fitTypeHtml='';
 if(w.type==='Blinds'){
-fitTypeHtml=`
-<div style="display:flex;flex-direction:column;gap:4px;font-size:12px">
-<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
-<input type="checkbox" ${w.recessFit?'checked':''} onchange="updateWindowFit(${index},'recessFit',this.checked)" style="width:auto"> Recess
-</label>
-<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
-<input type="checkbox" ${w.faceFit?'checked':''} onchange="updateWindowFit(${index},'faceFit',this.checked)" style="width:auto"> Face
-</label>
-</div>`;
+fitTypeHtml=`<div style="display:flex;flex-direction:column;gap:4px;font-size:12px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${w.recessFit?'checked':''} onchange="updateWindowFit(${index},'recessFit',this.checked)" style="width:auto"> Recess</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${w.faceFit?'checked':''} onchange="updateWindowFit(${index},'faceFit',this.checked)" style="width:auto"> Face</label></div>`;
 }else if(w.type==='Curtains'||w.type==='Verishade'){
-fitTypeHtml=`
-<div style="display:flex;flex-direction:column;gap:4px;font-size:12px">
-<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
-<input type="checkbox" ${w.ceilingFit?'checked':''} onchange="updateWindowFit(${index},'ceilingFit',this.checked)" style="width:auto"> Ceiling
-</label>
-<label style="display:flex;align-items:center;gap:4px;cursor:pointer">
-<input type="checkbox" ${w.faceFit?'checked':''} onchange="updateWindowFit(${index},'faceFit',this.checked)" style="width:auto"> Face
-</label>
-</div>`;
+fitTypeHtml=`<div style="display:flex;flex-direction:column;gap:4px;font-size:12px"><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${w.ceilingFit?'checked':''} onchange="updateWindowFit(${index},'ceilingFit',this.checked)" style="width:auto"> Ceiling</label><label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" ${w.faceFit?'checked':''} onchange="updateWindowFit(${index},'faceFit',this.checked)" style="width:auto"> Face</label></div>`;
+}else if(w.type==='Shutters'){
+const midRailHtml=w.midRailPosition?`<div style="color:#10B981;font-size:11px;font-weight:600">✓ Mid Rail: ${w.midRailPosition}mm</div>`:'';
+fitTypeHtml=`<div style="display:flex;flex-direction:column;gap:4px;font-size:12px"><button class="btn btn-teal" style="padding:4px 8px;font-size:11px" onclick="editMidRail(${index})">⚙️ Mid Rail</button>${midRailHtml}</div>`;
 }else{
 fitTypeHtml='<span style="color:#9CA3AF">-</span>';
 }
-row.innerHTML=`
-<td><input type="text" value="${w.room}" onchange="updateWindowField(${index},'room',this.value)" placeholder="Room" style="width:120px;padding:8px"></td>
-<td><input type="text" value="${w.windowNumber||''}" onchange="updateWindowField(${index},'windowNumber',this.value)" placeholder="W#" style="width:80px;padding:8px"></td>
-<td>
-<select onchange="updateWindowField(${index},'type',this.value)" style="width:120px;padding:8px">
-<option ${w.type==='Blinds'?'selected':''}>Blinds</option>
-<option ${w.type==='Shutters'?'selected':''}>Shutters</option>
-<option ${w.type==='Curtains'?'selected':''}>Curtains</option>
-<option ${w.type==='Verishade'?'selected':''}>Verishade</option>
-</select>
-</td>
-<td>
-${w.type==='Blinds'||w.type==='Curtains'?`
-<select onchange="updateWindowField(${index},'subType',this.value)" style="width:120px;padding:8px">
-${w.type==='Blinds'?`
-<option ${w.subType==='Roller'?'selected':''}>Roller</option>
-<option ${w.subType==='Vertical'?'selected':''}>Vertical</option>
-<option ${w.subType==='Zebra'?'selected':''}>Zebra</option>
-<option ${w.subType==='Venetian'?'selected':''}>Venetian</option>
-`:''}
-${w.type==='Curtains'?`
-<option ${w.subType==='Sheer'?'selected':''}>Sheer</option>
-<option ${w.subType==='Blockout'?'selected':''}>Blockout</option>
-`:''}
-</select>
-`:'<span style="color:#9CA3AF">-</span>'}
-</td>
-<td><input type="number" value="${w.width}" onchange="updateWindowField(${index},'width',this.value)" placeholder="Width" style="width:100px;padding:8px"></td>
-<td><input type="number" value="${w.drop}" onchange="updateWindowField(${index},'drop',this.value)" placeholder="Drop" style="width:100px;padding:8px"></td>
-<td>${fitTypeHtml}</td>
-<td style="font-weight:600;color:#7BCCC4">${area}</td>
-<td>${alert?`<span style="background:#FEF3C7;color:#B8936D;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap">${alert}</span>`:''}</td>
-<td><input type="text" value="${w.notes}" onchange="updateWindowField(${index},'notes',this.value)" placeholder="Notes" style="width:150px;padding:8px"></td>
-<td style="text-align:center">
-<button onclick="deleteWindow(${index})" class="btn btn-red" style="padding:8px 12px;font-size:14px">✕</button>
-</td>
-`;
+const row=document.createElement('tr');
+row.innerHTML=`<td><input type="text" value="${w.room||''}" onchange="updateWindowField(${index},'room',this.value)" placeholder="Room" style="width:120px;padding:8px"></td><td><input type="text" value="${w.windowNumber||''}" onchange="updateWindowField(${index},'windowNumber',this.value)" placeholder="W#" style="width:60px;padding:8px"></td><td><select onchange="updateWindowType(${index},this.value)" style="width:120px;padding:8px"><option ${w.type==='Blinds'?'selected':''}>Blinds</option><option ${w.type==='Curtains'?'selected':''}>Curtains</option><option ${w.type==='Verishade'?'selected':''}>Verishade</option><option ${w.type==='Shutters'?'selected':''}>Shutters</option></select></td><td><select onchange="updateWindowField(${index},'subType',this.value)" style="width:120px;padding:8px">${getSubTypeOptions(w.type,w.subType)}</select></td><td><input type="number" value="${w.width||''}" onchange="updateWindowField(${index},'width',this.value);checkMidRailRequired(${index})" placeholder="Width" style="width:90px;padding:8px"></td><td><input type="number" value="${w.drop||''}" onchange="updateWindowField(${index},'drop',this.value);checkMidRailRequired(${index})" placeholder="Drop" style="width:90px;padding:8px"></td><td>${fitTypeHtml}</td><td style="font-size:13px;font-weight:600;color:#7BCCC4">${width&&drop?areaText:'-'}</td><td>${alertText?`<span class="alert-badge">${alertText}</span>`:''}</td><td><input type="text" value="${w.notes||''}" onchange="updateWindowField(${index},'notes',this.value)" placeholder="Notes" style="width:120px;padding:8px"></td><td><button class="btn btn-red" style="padding:8px 12px;font-size:13px" onclick="deleteWindow(${index})">🗑️</button></td>`;
 tbody.appendChild(row);
 });
 }
 
-function updateWindowField(index,field,value){
-currentJob.windows[index][field]=value;
-if(field==='type'){
-if(value==='Blinds')currentJob.windows[index].subType='Roller';
-else if(value==='Curtains')currentJob.windows[index].subType='Sheer';
-else currentJob.windows[index].subType='';
-renderWindows();
+function editMidRail(index){checkMidRailRequired(index);}
+
+function getSubTypeOptions(type,selected){
+let options='';
+if(type==='Blinds'){
+['Roller','Trublockout','Vertical','Zebra','Venetian'].forEach(s=>{options+=`<option ${s===selected?'selected':''}>${s}</option>`;});
+}else if(type==='Curtains'){
+['Sheer','Blockout'].forEach(s=>{options+=`<option ${s===selected?'selected':''}>${s}</option>`;});
+}else{
+options=`<option>-</option>`;
 }
-if(field==='width'||field==='drop'){
-renderWindows();
-updateLiveSummary();
-}
+return options;
 }
 
-function deleteWindow(index){
-currentJob.windows.splice(index,1);
+function updateWindowType(index,type){
+currentJob.windows[index].type=type;
+currentJob.windows[index].subType=type==='Blinds'?'Roller':type==='Curtains'?'Sheer':'-';
+currentJob.windows[index].fabricType=getFabricTypeDefault(type,currentJob.windows[index].subType);
+currentJob.windows[index].recessFit=false;
+currentJob.windows[index].faceFit=false;
+currentJob.windows[index].ceilingFit=false;
+currentJob.windows[index].midRailPosition=null;
 updateWindowsDisplay();
+}
+
+function getFabricTypeDefault(type,subType){
+if(type==='Blinds'&&subType==='Roller')return 'Toorak';
+if(type==='Blinds'&&subType==='Vertical')return 'Category A';
+if(type==='Curtains'&&subType==='Sheer')return 'Group 1 - Most Trending';
+if(type==='Curtains'&&subType==='Blockout')return 'Group 1 - Nettex';
+if(type==='Verishade')return 'Category 1 - Wand';
+return '';
+}
+
+function updateWindowField(index,field,value){
+currentJob.windows[index][field]=value;
+renderWindows();
+updateLiveSummary();
 }
 
 function updateWindowFit(index,field,checked){
 currentJob.windows[index][field]=checked;
 }
 
-function getAlert(window){
-const width=parseFloat(window.width)||0;
-const drop=parseFloat(window.drop)||0;
-if(window.type==='Blinds'&&width>2200){
-return 'Thick tube';
-}
-if(window.type==='Shutters'&&drop>1200){
-return 'Mid rail';
-}
-if(window.type==='Curtains'&&width>3000){
-return 'Extra ship';
-}
-return '';
+function deleteWindow(index){
+currentJob.windows.splice(index,1);
+updateWindowsDisplay();
 }
 
 function calculateTotals(job){
@@ -449,15 +605,17 @@ const totalWithMultiplier=totals[key].supplyCost*multiplier;
 totals[key].markup=totalWithMultiplier-totals[key].supplyCost;
 totals[key].subtotal=totalWithMultiplier;
 });
+const freight=calculateFreight();
+const numProducts=job.windows.length;
+const freightPerProduct=numProducts>0?freight/numProducts:0;
 const totalSupplyCost=Object.values(totals).reduce((sum,t)=>sum+t.supplyCost,0);
 const totalMarkup=Object.values(totals).reduce((sum,t)=>sum+t.markup,0);
-const subtotalBeforeShipping=totalSupplyCost+totalMarkup;
-const shipping=job.shippingCost||0;
-const subtotalWithShipping=subtotalBeforeShipping+shipping;
-const gst=subtotalWithShipping*GST_RATE;
-const total=subtotalWithShipping+gst;
-const customerPrice=totalSupplyCost+shipping+((totalSupplyCost+shipping)*GST_RATE);
-return{totals,totalSupplyCost,totalMarkup,subtotalBeforeShipping,shipping,subtotalWithShipping,gst,total,customerPrice};
+const subtotalBeforeFreight=totalSupplyCost+totalMarkup;
+const subtotalWithFreight=subtotalBeforeFreight+freight;
+const gst=subtotalWithFreight*GST_RATE;
+const total=subtotalWithFreight+gst;
+const customerPrice=totalSupplyCost+freight+((totalSupplyCost+freight)*GST_RATE);
+return{totals,totalSupplyCost,totalMarkup,subtotalBeforeFreight,freight,freightPerProduct,subtotalWithFreight,gst,total,customerPrice};
 }
 
 function updateLiveSummary(){
@@ -473,21 +631,20 @@ html+=`<div class="summary-box"><div class="summary-label">Supply Cost</div><div
 html+=`<div class="summary-box"><div class="summary-label">Customer (no markup)</div><div class="summary-value">$${calc.customerPrice.toFixed(2)}</div></div>`;
 html+=`<div class="summary-box" style="background:rgba(255,255,255,0.3)"><div class="summary-label">Quote Price</div><div class="summary-value">$${calc.total.toFixed(2)}</div></div>`;
 html+='</div>';
-html+=`<div style="margin-top:15px;font-size:14px;opacity:0.9">Markup: $${calc.totalMarkup.toFixed(2)} • GST: $${calc.gst.toFixed(2)}</div>`;
+html+=`<div style="margin-top:15px;font-size:14px;opacity:0.9">Markup: $${calc.totalMarkup.toFixed(2)} • Freight: $${calc.freight.toFixed(2)} (${calc.freightPerProduct.toFixed(2)}/product) • GST: $${calc.gst.toFixed(2)}</div>`;
 html+='</div>';
 document.getElementById('liveSummary').innerHTML=html;
 }
 
 function showFinalDetails(){
 currentJob.clientName=document.getElementById('clientName').value;
-if(!currentJob.clientName){
-alert('Please enter client name');
-return;
-}
+if(!currentJob.clientName){alert('Please enter client name');return;}
+if(currentJob.windows.length===0){alert('Please add at least one window');return;}
+for(let i=0;i<currentJob.windows.length;i++){if(!checkMidRailRequired(i))return;}
 currentJob.address=document.getElementById('address').value;
 currentJob.phone=document.getElementById('phone').value;
 currentJob.email=document.getElementById('email').value;
-currentJob.shippingCost=parseFloat(document.getElementById('shippingCost').value)||0;
+currentJob.freightCarrier=freightCarrier;
 showingFinalDetails=true;
 document.getElementById('btnContinue').classList.add('hidden');
 document.getElementById('btnSave').classList.remove('hidden');
@@ -497,46 +654,77 @@ updateLiveSummary();
 }
 
 function renderPricingAdjustments(){
-const usedTypes=new Set();
-currentJob.windows.forEach(w=>{
+let html='<table class="price-table" style="width:100%;border-collapse:collapse">';
+html+='<thead><tr style="background:linear-gradient(135deg,#7BCCC4 0%,#5BA89F 100%)"><th style="padding:12px;text-align:left;color:white">Product</th><th style="padding:12px;text-align:left;color:white">Fabric</th><th style="padding:12px;text-align:left;color:white">Color</th><th style="padding:12px;text-align:left;color:white">Rate</th><th style="padding:12px;text-align:left;color:white">Multiplier</th></tr></thead><tbody>';
+currentJob.windows.forEach((w,idx)=>{
 const key=w.type==='Blinds'?`Blinds-${w.subType}`:w.type==='Curtains'?`Curtains-${w.subType}`:w.type;
-usedTypes.add(key);
+const unit=w.type==='Curtains'?'$/m':'$/m²';
+const currentRate=currentJob.rates[key]||defaultRates[key]||0;
+const currentMult=currentJob.multipliers[key]||defaultMultipliers[key]||1.8;
+const fabricOptions=getFabricOptions(w.type,w.subType);
+const fabricSelect=fabricOptions.length>0?`<select id="jobfabric-${idx}" onchange="updateJobFabric(${idx})" style="width:160px;padding:10px;border:2px solid #D1D5DB;border-radius:6px">${fabricOptions.map(f=>`<option value="${f}" ${w.fabricType===f?'selected':''}>${f}</option>`).join('')}</select>`:`<span style="color:#999">-</span>`;
+html+=`<tr style="border-bottom:1px solid #E5E7EB"><td style="padding:12px;font-weight:600;color:#1F2937">${w.room||'Window '+(idx+1)} - ${w.type} ${w.subType}</td><td style="padding:12px">${fabricSelect}</td><td style="padding:12px"><input type="text" id="jobcolor-${idx}" value="${w.color||''}" oninput="updateJobColor(${idx})" placeholder="White, Beige, etc" style="width:140px;padding:10px;border:2px solid #D1D5DB;border-radius:6px"></td><td style="padding:12px"><input type="number" id="jobrate-${idx}" value="${currentRate}" oninput="updateJobRates()" style="width:100px;padding:10px;border:2px solid #D1D5DB;border-radius:6px;font-size:15px"> <span style="color:#6B7280">${unit}</span></td><td style="padding:12px"><input type="number" step="0.1" id="jobmult-${idx}" value="${currentMult}" oninput="updateJobRates()" style="width:80px;padding:10px;border:2px solid #D1D5DB;border-radius:6px;font-size:15px;background:white;color:#1F2937"> <span style="color:#6B7280">x</span></td></tr>`;
 });
-let html='<table class="price-table">';
-html+='<tr><th style="text-align:left">Product</th><th>Rate</th><th>Multiplier</th></tr>';
-Array.from(usedTypes).forEach(key=>{
-const unit=key.startsWith('Curtains-')?'$/m':'$/m²';
-html+=`<tr><td style="font-weight:600">${key.replace('-',' - ')}</td>`;
-html+=`<td><input type="number" id="jobrate-${key}" value="${currentJob.rates[key]}" oninput="updateJobRates()" style="width:100px;padding:8px"> ${unit}</td>`;
-html+=`<td><input type="number" step="0.1" id="jobmult-${key}" value="${currentJob.multipliers[key]}" oninput="updateJobRates()" style="width:100px;padding:8px"> x</td>`;
-html+='</tr>';
-});
-html+='</table>';
+html+='</tbody></table>';
+const calc=calculateTotals(currentJob);
+html+=`<div class="freight-note" style="margin-top:15px">🚚 <strong>Freight:</strong> $${calc.freight.toFixed(2)} total (distributed $${calc.freightPerProduct.toFixed(2)} per product, no margin added)</div>`;
 document.getElementById('pricingAdjustments').innerHTML=html;
 }
 
-function updateJobRates(){
-const usedTypes=new Set();
-currentJob.windows.forEach(w=>{
+function updateJobColor(idx){
+const colorEl=document.getElementById('jobcolor-'+idx);
+if(colorEl)currentJob.windows[idx].color=colorEl.value;
+}
+
+function getFabricOptions(type,subType){
+if(type==='Blinds'&&subType==='Roller')return Object.keys(PRICE_LISTS.rollerBlinds);
+if(type==='Blinds'&&subType==='Vertical')return Object.keys(PRICE_LISTS.verticalBlinds);
+if(type==='Curtains'&&subType==='Sheer')return Object.keys(PRICE_LISTS.curtainsSheer);
+if(type==='Curtains'&&subType==='Blockout')return Object.keys(PRICE_LISTS.curtainsBlockout);
+if(type==='Verishade')return Object.keys(PRICE_LISTS.verishade);
+return [];
+}
+
+function updateJobFabric(idx){
+const fabricType=document.getElementById('jobfabric-'+idx).value;
+currentJob.windows[idx].fabricType=fabricType;
+const w=currentJob.windows[idx];
 const key=w.type==='Blinds'?`Blinds-${w.subType}`:w.type==='Curtains'?`Curtains-${w.subType}`:w.type;
-usedTypes.add(key);
+let newRate=0;
+if(w.type==='Blinds'&&w.subType==='Roller'){newRate=PRICE_LISTS.rollerBlinds[fabricType]||defaultRates[key];}
+else if(w.type==='Blinds'&&w.subType==='Vertical'){newRate=PRICE_LISTS.verticalBlinds[fabricType]||defaultRates[key];}
+else if(w.type==='Curtains'&&w.subType==='Sheer'){newRate=PRICE_LISTS.curtainsSheer[fabricType]||defaultRates[key];}
+else if(w.type==='Curtains'&&w.subType==='Blockout'){newRate=PRICE_LISTS.curtainsBlockout[fabricType]||defaultRates[key];}
+else if(w.type==='Verishade'){newRate=PRICE_LISTS.verishade[fabricType]||defaultRates[key];}
+else{newRate=defaultRates[key];}
+document.getElementById('jobrate-'+idx).value=newRate;
+currentJob.rates[key]=newRate;
+updateJobRates();
+}
+
+function updateJobRates(){
+currentJob.windows.forEach((w,idx)=>{
+const key=w.type==='Blinds'?`Blinds-${w.subType}`:w.type==='Curtains'?`Curtains-${w.subType}`:w.type;
+const rateEl=document.getElementById('jobrate-'+idx);
+const multEl=document.getElementById('jobmult-'+idx);
+if(rateEl)currentJob.rates[key]=parseFloat(rateEl.value)||0;
+if(multEl)currentJob.multipliers[key]=parseFloat(multEl.value)||1;
 });
-Array.from(usedTypes).forEach(key=>{
-currentJob.rates[key]=parseFloat(document.getElementById('jobrate-'+key).value)||0;
-currentJob.multipliers[key]=parseFloat(document.getElementById('jobmult-'+key).value)||1;
-});
-currentJob.shippingCost=parseFloat(document.getElementById('shippingCost').value)||0;
 updateLiveSummary();
+renderPricingAdjustments();
 }
 
 function saveJob(){
 currentJob.savedAt=new Date().toISOString();
+currentJob.freightCost=calculateFreight();
 jobs.push(currentJob);
 saveJobs();
+alert('✓ Job saved successfully!');
 currentJob=null;
 showingFinalDetails=false;
 document.getElementById('emptyState').classList.remove('hidden');
 document.getElementById('jobForm').classList.add('hidden');
+document.getElementById('windowsCard').classList.add('hidden');
 document.getElementById('jobButtons').classList.add('hidden');
 document.getElementById('finalDetails').classList.add('hidden');
 document.getElementById('btnContinue').classList.remove('hidden');
@@ -550,8 +738,10 @@ currentJob=null;
 showingFinalDetails=false;
 document.getElementById('emptyState').classList.remove('hidden');
 document.getElementById('jobForm').classList.add('hidden');
+document.getElementById('windowsCard').classList.add('hidden');
 document.getElementById('jobButtons').classList.add('hidden');
 document.getElementById('finalDetails').classList.add('hidden');
+document.getElementById('liveSummary').classList.add('hidden');
 document.getElementById('btnContinue').classList.remove('hidden');
 document.getElementById('btnSave').classList.add('hidden');
 }
@@ -560,99 +750,20 @@ document.getElementById('btnSave').classList.add('hidden');
 function renderSavedJobs(){
 const container=document.getElementById('savedJobsList');
 if(jobs.length===0){
-container.innerHTML=`
-<div class="card">
-<div class="empty-state">
-<div class="empty-icon">📂</div>
-<h2 class="empty-title">No Saved Jobs</h2>
-<p class="empty-text">Start measuring to create your first job</p>
-</div>
-</div>
-`;
-}else{
-container.innerHTML=jobs.map((job,index)=>{
-const calc=calculateTotals(job);
-return`
-<div class="card">
-<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:15px;flex-wrap:wrap;gap:10px">
-<div>
-<h3 style="margin:0 0 8px 0;font-size:24px;color:#7BCCC4">${job.clientName}</h3>
-<p style="margin:4px 0;color:#6B7280;font-size:14px">${job.address}</p>
-<p style="margin:4px 0;color:#6B7280;font-size:14px">${job.phone}</p>
-<p style="margin:4px 0;color:#6B7280;font-size:14px">Windows: ${job.windows.length} • Date: ${job.date}</p>
-</div>
-<div style="display:flex;gap:10px;flex-wrap:wrap">
-<button onclick="exportJob(${index})" class="btn btn-teal" style="padding:12px 20px">📋 Copy</button>
-<button onclick="downloadJob(${index})" class="btn" style="padding:12px 20px;background:#10B981;color:white">💾 Download</button>
-<button onclick="deleteJob(${index})" class="btn btn-red" style="padding:12px 20px">🗑️</button>
-</div>
-</div>
-<div class="summary-grid">
-<div style="background:#EBF5FF;padding:15px;border-radius:8px"><div style="font-size:12px;color:#1E40AF;margin-bottom:5px">Supply Cost</div><div style="font-size:22px;font-weight:700;color:#1E40AF">$${calc.totalSupplyCost.toFixed(2)}</div></div>
-<div style="background:#FEF3C7;padding:15px;border-radius:8px"><div style="font-size:12px;color:#B8936D;margin-bottom:5px">Customer (no markup)</div><div style="font-size:22px;font-weight:700;color:#B8936D">$${calc.customerPrice.toFixed(2)}</div></div>
-<div style="background:#D1FAE5;padding:15px;border-radius:8px"><div style="font-size:12px;color:#047857;margin-bottom:5px">Quote Price</div><div style="font-size:24px;font-weight:700;color:#047857">$${calc.total.toFixed(2)}</div></div>
-</div>
-</div>
-`;
-}).join('');
+container.innerHTML='<div class="empty-state"><div class="empty-icon">📁</div><h3>No Saved Jobs</h3><p>Completed jobs will appear here</p></div>';
+return;
 }
-}
-
-function exportJob(index){
-const job=jobs[index];
+container.innerHTML='';
+jobs.slice().reverse().forEach((job,reverseIndex)=>{
+const index=jobs.length-1-reverseIndex;
+currentJob=job;
 const calc=calculateTotals(job);
-let report=generateReport(job,calc);
-navigator.clipboard.writeText(report).then(()=>{
-alert('✓ Report copied to clipboard!');
-}).catch(()=>{
-alert('Unable to copy. Use Download button instead.');
+currentJob=null;
+const card=document.createElement('div');
+card.className='card';
+card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:15px"><div><h3 style="color:#1F2937;margin-bottom:8px">${job.clientName}</h3><p style="color:#6B7280;font-size:14px">${job.date} • ${job.windows.length} windows • $${calc.total.toFixed(2)}</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-teal" style="padding:10px 16px;font-size:14px" onclick="downloadJob(${index})">📥 Download</button><button class="btn" style="padding:10px 16px;font-size:14px;background:#13B5EA;color:white" onclick="exportToXero(${index})">📤 Export to Xero</button><button class="btn btn-red" style="padding:10px 16px;font-size:14px" onclick="deleteJob(${index})">🗑️</button></div></div>`;
+container.appendChild(card);
 });
-}
-
-function downloadJob(index){
-const job=jobs[index];
-const calc=calculateTotals(job);
-let report=generateReport(job,calc);
-const blob=new Blob([report],{type:'text/plain'});
-const url=URL.createObjectURL(blob);
-const a=document.createElement('a');
-a.href=url;
-a.download=`Decovibes_${job.clientName.replace(/\s+/g,'_')}_${job.date}.txt`;
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-URL.revokeObjectURL(url);
-}
-
-function generateReport(job,calc){
-let report=`DECOVIBES - MEASUREMENT REPORT\n\nClient: ${job.clientName}\nAddress: ${job.address}\nPhone: ${job.phone}\nDate: ${job.date}\n\nWINDOWS:\n${'='.repeat(50)}\n`;
-job.windows.forEach((w,i)=>{
-const windowNum=w.windowNumber?`${w.windowNumber} - `:'';
-report+=`${i+1}. ${w.room||'Room'} ${windowNum}${w.type}`;
-if(w.subType)report+=` (${w.subType})`;
-report+=`\n   ${w.width}mm W × ${w.drop}mm D\n`;
-const fitTypes=[];
-if(w.type==='Blinds'){
-if(w.recessFit)fitTypes.push('✓ Recess');
-if(w.faceFit)fitTypes.push('✓ Face');
-}else if(w.type==='Curtains'||w.type==='Verishade'){
-if(w.ceilingFit)fitTypes.push('✓ Ceiling');
-if(w.faceFit)fitTypes.push('✓ Face');
-}
-if(fitTypes.length>0)report+=`   Fit: ${fitTypes.join(', ')}\n`;
-if(w.notes)report+=`   Notes: ${w.notes}\n`;
-const alert=getAlert(w);
-if(alert)report+=`   Alert: ${alert}\n`;
-report+=`\n`;
-});
-report+=`\nPRICING:\n${'='.repeat(50)}\n`;
-report+=`Supply Cost: $${calc.totalSupplyCost.toFixed(2)}\n`;
-report+=`Markup: $${calc.totalMarkup.toFixed(2)}\n`;
-report+=`Shipping: $${calc.shipping.toFixed(2)}\n`;
-report+=`GST (10%): $${calc.gst.toFixed(2)}\n\n`;
-report+=`CUSTOMER PRICE (no markup, Inc GST): $${calc.customerPrice.toFixed(2)}\n`;
-report+=`QUOTE PRICE (with markup, Inc GST): $${calc.total.toFixed(2)}\n`;
-return report;
 }
 
 function deleteJob(index){
@@ -663,25 +774,220 @@ renderSavedJobs();
 }
 }
 
-function updateNetworkStatus(){
-const indicator=document.getElementById('network-status');
-if(navigator.onLine){
-indicator.className='status online';
-indicator.textContent='● Online';
-}else{
-indicator.className='status offline';
-indicator.textContent='● Offline';
+function downloadJob(index){
+const job=jobs[index];
+currentJob=job;
+const calc=calculateTotals(job);
+currentJob=null;
+let txt='='.repeat(60)+'\n';
+txt+='           DECOVIBES MEASUREMENT REPORT\n';
+txt+='='.repeat(60)+'\n\n';
+txt+='CLIENT: '+job.clientName+'\n';
+if(job.address)txt+='ADDRESS: '+job.address+'\n';
+if(job.phone)txt+='PHONE: '+job.phone+'\n';
+if(job.email)txt+='EMAIL: '+job.email+'\n';
+txt+='DATE: '+job.date+'\n\n';
+txt+='-'.repeat(60)+'\n';
+txt+='WINDOWS:\n';
+txt+='-'.repeat(60)+'\n\n';
+job.windows.forEach((w,i)=>{
+txt+='Window '+(i+1)+':\n';
+if(w.room)txt+='  Room: '+w.room+'\n';
+if(w.windowNumber)txt+='  Window #: '+w.windowNumber+'\n';
+txt+='  Type: '+w.type+' - '+w.subType+'\n';
+if(w.fabricType)txt+='  Fabric: '+w.fabricType+'\n';
+if(w.color)txt+='  Color: '+w.color+'\n';
+txt+='  Dimensions: '+w.width+'mm × '+w.drop+'mm\n';
+if(w.midRailPosition)txt+='  Mid Rail Position: '+w.midRailPosition+'mm\n';
+const fits=[];
+if(w.recessFit)fits.push('Recess');
+if(w.faceFit)fits.push('Face');
+if(w.ceilingFit)fits.push('Ceiling');
+if(fits.length)txt+='  Fit: '+fits.join(', ')+'\n';
+if(w.notes)txt+='  Notes: '+w.notes+'\n';
+const alert=getAlert(w);
+if(alert)txt+='  Alert: '+alert+'\n';
+txt+='\n';
+});
+txt+='-'.repeat(60)+'\n';
+txt+='SUMMARY:\n';
+txt+='  Total Supply: $'+calc.totalSupplyCost.toFixed(2)+'\n';
+txt+='  Total Markup: $'+calc.totalMarkup.toFixed(2)+'\n';
+txt+='  Subtotal: $'+calc.subtotalBeforeFreight.toFixed(2)+'\n';
+txt+='  Freight: $'+calc.freight.toFixed(2)+'\n';
+txt+='  Subtotal + Freight: $'+calc.subtotalWithFreight.toFixed(2)+'\n';
+txt+='  GST (10%): $'+calc.gst.toFixed(2)+'\n';
+txt+='  TOTAL: $'+calc.total.toFixed(2)+'\n';
+txt+='\n'+'='.repeat(60)+'\n';
+txt+='Generated: '+new Date().toLocaleString()+'\n';
+txt+='='.repeat(60)+'\n';
+const blob=new Blob([txt],{type:'text/plain'});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;
+a.download='decovibes_'+job.clientName.replace(/\s+/g,'_')+'_'+job.date+'.txt';
+a.click();
+URL.revokeObjectURL(url);
+}
+
+window.addEventListener('online',()=>{document.getElementById('network-status').className='status online';document.getElementById('network-status').textContent='● Online';});
+window.addEventListener('offline',()=>{document.getElementById('network-status').className='status offline';document.getElementById('network-status').textContent='● Offline';});
+
+
+// ==================== XERO INTEGRATION ====================
+
+function copyRedirectUri(){
+const input=document.getElementById('currentRedirectUri');
+input.select();
+input.setSelectionRange(0,99999);
+try{
+document.execCommand('copy');
+alert('✅ Copied!\n\nhttps://measure.decovibes.com.au\n\nPaste this into your Xero app Redirect URI field.');
+}catch(err){
+alert('📋 Redirect URI:\n\nhttps://measure.decovibes.com.au\n\nManually copy and paste this into Xero.');
 }
 }
 
-window.addEventListener('online',updateNetworkStatus);
-window.addEventListener('offline',updateNetworkStatus);
-window.addEventListener('load',()=>{
-loadJobs();
-if('serviceWorker'in navigator){
-navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+function connectXero(){
+const clientId=document.getElementById('xeroClientId').value.trim();
+const clientSecret=document.getElementById('xeroClientSecret').value.trim();
+if(!clientId||!clientSecret){
+alert('⚠️ Please enter both Client ID and Client Secret');
+return;
 }
+localStorage.setItem('xeroClientId',clientId);
+localStorage.setItem('xeroClientSecret',clientSecret);
+const redirectUri=window.location.origin+window.location.pathname;
+const authUrl=`https://login.xero.com/identity/connect/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=accounting.transactions accounting.contacts&state=decovibes123`;
+window.location.href=authUrl;
+}
+
+function handleXeroCallback(){
+const urlParams=new URLSearchParams(window.location.search);
+const code=urlParams.get('code');
+const state=urlParams.get('state');
+if(code&&state==='decovibes123'){
+const clientId=localStorage.getItem('xeroClientId');
+const clientSecret=localStorage.getItem('xeroClientSecret');
+const redirectUri=window.location.origin+window.location.pathname;
+document.getElementById('xeroStatus').innerHTML='<span style="color:#F59E0B">⏳ Connecting...</span>';
+fetch('https://identity.xero.com/connect/token',{
+method:'POST',
+headers:{'Content-Type':'application/x-www-form-urlencoded'},
+body:`grant_type=authorization_code&code=${code}&redirect_uri=${encodeURIComponent(redirectUri)}&client_id=${clientId}&client_secret=${clientSecret}`
+}).then(r=>r.json()).then(data=>{
+if(data.error){throw new Error(data.error_description||'Auth failed');}
+xeroAccessToken=data.access_token;
+localStorage.setItem('xeroAccessToken',data.access_token);
+localStorage.setItem('xeroRefreshToken',data.refresh_token);
+return fetch('https://api.xero.com/connections',{headers:{'Authorization':`Bearer ${xeroAccessToken}`}});
+}).then(r=>r.json()).then(tenants=>{
+if(!tenants||tenants.length===0){throw new Error('No Xero organization found');}
+xeroTenantId=tenants[0].tenantId;
+localStorage.setItem('xeroTenantId',xeroTenantId);
+xeroConnected=true;
+document.getElementById('xeroStatus').innerHTML='<span style="color:#10B981;font-weight:700">✓ Connected</span>';
+alert('✅ Successfully connected to Xero!\n\nYou can now export quotes directly to your Xero account.');
+window.history.replaceState({},document.title,window.location.pathname);
+}).catch(err=>{
+console.error('Xero auth error:',err);
+document.getElementById('xeroStatus').innerHTML='<span style="color:#DC2626">❌ Failed</span>';
+alert('❌ Failed to connect to Xero:\n\n'+err.message+'\n\nPlease check your Client ID and Secret.');
 });
+}
+}
+
+async function exportToXero(index){
+const job=jobs[index];
+if(!job){alert('Job not found');return;}
+currentJob=job;
+const calc=calculateTotals(job);
+currentJob=null;
+if(!xeroAccessToken){xeroAccessToken=localStorage.getItem('xeroAccessToken');}
+if(!xeroTenantId){xeroTenantId=localStorage.getItem('xeroTenantId');}
+if(!xeroAccessToken||!xeroTenantId){
+if(confirm('⚠️ Xero is not connected.\n\nWould you like to set up Xero integration now?')){
+showTab('measure');
+document.getElementById('btnSettings').click();
+}
+return;
+}
+const freightPerProduct=calc.freight/job.windows.length;
+const lineItems=[];
+job.windows.forEach((w,i)=>{
+const width=parseFloat(w.width)||0;
+const drop=parseFloat(w.drop)||0;
+const key=w.type==='Blinds'?`Blinds-${w.subType}`:w.type==='Curtains'?`Curtains-${w.subType}`:w.type;
+const rate=job.rates[key]||defaultRates[key]||0;
+const multiplier=job.multipliers[key]||defaultMultipliers[key]||1;
+const area=w.type==='Curtains'?(width/1000):((width*drop)/1000000);
+const basePrice=area*rate*multiplier;
+const priceWithFreight=basePrice+freightPerProduct;
+let description=`${w.room||'Window '+(i+1)} - ${w.type} ${w.subType}`;
+if(w.color)description+=` (${w.color})`;
+if(w.fabricType)description+=` - ${w.fabricType}`;
+description+=`\n${width}mm x ${drop}mm`;
+if(w.midRailPosition)description+=` | Mid Rail: ${w.midRailPosition}mm`;
+const fits=[];
+if(w.recessFit)fits.push('Recess');
+if(w.faceFit)fits.push('Face');
+if(w.ceilingFit)fits.push('Ceiling');
+if(fits.length)description+=` | ${fits.join(', ')} Fit`;
+if(w.notes)description+=`\nNotes: ${w.notes}`;
+lineItems.push({Description:description,Quantity:1,UnitAmount:parseFloat(priceWithFreight.toFixed(2)),AccountCode:"200",TaxType:"OUTPUT"});
+});
+const quoteData={Type:"ACCREC",Contact:{Name:job.clientName,EmailAddress:job.email||'',Addresses:[{AddressType:"STREET",AddressLine1:job.address||''}]},Date:job.date,DueDate:job.date,Reference:`QUOTE-${job.id}`,LineItems:lineItems,Status:"DRAFT"};
+try{
+const response=await fetch('https://api.xero.com/api.xro/2.0/Quotes',{method:'POST',headers:{'Authorization':`Bearer ${xeroAccessToken}`,'Xero-tenant-id':xeroTenantId,'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(quoteData)});
+if(!response.ok){
+if(response.status===401){
+const refreshToken=localStorage.getItem('xeroRefreshToken');
+const clientId=localStorage.getItem('xeroClientId');
+const clientSecret=localStorage.getItem('xeroClientSecret');
+if(refreshToken&&clientId&&clientSecret){
+const refreshResponse=await fetch('https://identity.xero.com/connect/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=refresh_token&refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}`});
+const refreshData=await refreshResponse.json();
+if(refreshData.access_token){
+xeroAccessToken=refreshData.access_token;
+localStorage.setItem('xeroAccessToken',refreshData.access_token);
+return exportToXero(index);
+}
+}
+throw new Error('Session expired. Please reconnect to Xero.');
+}
+const errorData=await response.json();
+throw new Error(errorData.Message||`API error: ${response.status}`);
+}
+const result=await response.json();
+const quote=result.Quotes[0];
+alert(`✅ Quote sent to Xero successfully!\n\n📄 Quote Number: ${quote.QuoteNumber}\n💰 Total: $${calc.total.toFixed(2)}\n📅 Date: ${job.date}\n\n✨ You can now view and send this quote from your Xero account.`);
+}catch(err){
+console.error('Xero export error:',err);
+alert(`❌ Failed to export to Xero:\n\n${err.message}\n\nPlease check your connection and try again.`);
+}
+}
+
+window.addEventListener('load',function(){
+const redirectUri=window.location.origin+window.location.pathname;
+const redirectUriField=document.getElementById('currentRedirectUri');
+if(redirectUriField){redirectUriField.value=redirectUri;}
+handleXeroCallback();
+xeroAccessToken=localStorage.getItem('xeroAccessToken');
+xeroTenantId=localStorage.getItem('xeroTenantId');
+if(xeroAccessToken&&xeroTenantId){
+xeroConnected=true;
+const statusEl=document.getElementById('xeroStatus');
+if(statusEl){statusEl.innerHTML='<span style="color:#10B981;font-weight:700">✓ Connected</span>';}
+}
+const clientId=localStorage.getItem('xeroClientId');
+const clientSecret=localStorage.getItem('xeroClientSecret');
+if(clientId){document.getElementById('xeroClientId').value=clientId;}
+if(clientSecret){document.getElementById('xeroClientSecret').value=clientSecret;}
+});
+
+// ==================== END XERO INTEGRATION ====================
+
+loadJobs();
 </script>
 </body>
 </html>
